@@ -1,0 +1,144 @@
+{% extends '_base.html' %}
+{% load static %}
+
+{% block css %}
+<style>
+    .movie-card {
+        transition: transform 0.2s;
+        height: 100%;
+    }
+
+    .movie-card:hover {
+        transform: scale(1.02);
+    }
+
+    .movie-thumbnail {
+        height: 300px;
+        object-fit: cover;
+    }
+
+    .rating-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: rgba(0, 0, 0, 0.8);
+        color: #ffc107;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-weight: bold;
+    }
+
+    .filter-section {
+        background-color: rgba(0, 0, 0, 0.05);
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+
+    .btn-filter {
+        background-color: #e50914;
+        color: white;
+        border: none;
+    }
+
+    .btn-filter:hover {
+        background-color: #b2070f;
+        color: white;
+    }
+
+    .btn-filter.active {
+        background-color: #333;
+        color: white;
+    }
+
+    .overview-text {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .add-to-watchlist {
+        background-color: #e50914;
+        color: white;
+        border: none;
+    }
+
+    .add-to-watchlist:hover {
+        background-color: #b2070f;
+        color: white;
+    }
+</style>
+{% endblock css %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Trending</h1>
+        <div class="filter-buttons">
+            <a href="{% url 'trending' %}?type=movie" class="btn btn-filter {% if request.GET.type == 'movie' or not request.GET.type %}active{% endif %} me-2">
+                <i class="fas fa-film me-1"></i>Movies
+            </a>
+            <a href="{% url 'trending' %}?type=tv" class="btn btn-filter {% if request.GET.type == 'tv' %}active{% endif %}">
+                <i class="fas fa-tv me-1"></i>TV Shows
+            </a>
+        </div>
+    </div>
+
+    <div class="filter-section">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h5 class="mb-3">Time Window</h5>
+                <div class="btn-group" role="group">
+                    <a href="{% url 'trending' %}?type={{ request.GET.type|default:'movie' }}&time_window=day" 
+                       class="btn btn-filter {% if request.GET.time_window == 'day' %}active{% endif %}">Today</a>
+                    <a href="{% url 'trending' %}?type={{ request.GET.type|default:'movie' }}&time_window=week" 
+                       class="btn btn-filter {% if request.GET.time_window == 'week' or not request.GET.time_window %}active{% endif %}">This Week</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        {% for movie in movies %}
+        <div class="col-md-4">
+            <div class="card movie-card shadow">
+                <div class="position-relative">
+                    <img src="https://image.tmdb.org/t/p/w500{{ movie.poster_path }}" 
+                         class="card-img-top movie-thumbnail" 
+                         alt="{{ movie.title|default:movie.original_title }}">
+                    <div class="rating-badge">
+                        <i class="fas fa-star"></i> {{ movie.vote_average|floatformat:1 }}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ movie.title|default:movie.original_title }}</h5>
+                    <p class="card-text overview-text text-muted">{{ movie.overview }}</p>
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <form method="post" action="{% url 'add_to_watchlist' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="tmdb_id" value="{{ movie.id }}">
+                            <input type="hidden" name="title" value="{{ movie.title|default:movie.original_title }}">
+                            <input type="hidden" name="media_type" value="{{ movie.media_type }}">
+                            <input type="hidden" name="poster_path" value="{{ movie.poster_path }}">
+                            <button type="submit" class="btn add-to-watchlist btn-sm">
+                                <i class="fas fa-plus me-1"></i>Add to Watchlist
+                            </button>
+                        </form>
+                        <small class="text-muted">
+                            {{ movie.release_date|date:"M d, Y" }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info text-center">
+                No trending {{ request.GET.type|default:'movie' }}s found for this time period.
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock content %} 
