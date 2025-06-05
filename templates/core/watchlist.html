@@ -10,26 +10,146 @@
     .nav-link.active {
         color: #333 !important;
     }
-</style>
 
+    .movie-card {
+        transition: transform 0.2s;
+    }
+
+    .movie-card:hover {
+        transform: scale(1.02);
+    }
+
+    .movie-thumbnail {
+        height: 300px;
+        object-fit: cover;
+    }
+
+    .btn-mark-complete {
+        background-color: #e50914;
+        color: white;
+    }
+
+    .btn-mark-complete:hover {
+        background-color: #b2070f;
+        color: white;
+    }
+</style>
 {% endblock css %}
 
 {% block content %}
-
 <div class="container mt-5">
     <h1>My List</h1>
 
-    <ul class="nav nav-underline">
+    <ul class="nav nav-underline mb-4">
         <li class="nav-item">
-            <a class="nav-link active" aria-current="page" href="#">Watchlist</a>
+            <a class="nav-link active" id="watchlist-tab" data-bs-toggle="tab" href="#watchlist" role="tab">Watchlist</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" href="#">Currently Watching</a>
+            <a class="nav-link" id="watching-tab" data-bs-toggle="tab" href="#watching" role="tab">Currently Watching</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" href="#">Completed</a>
+            <a class="nav-link" id="completed-tab" data-bs-toggle="tab" href="#completed" role="tab">Completed</a>
         </li>
     </ul>
-</div>
 
+    <div class="tab-content">
+        <!-- Watchlist Tab -->
+        <div class="tab-pane fade show active" id="watchlist" role="tabpanel">
+            <div class="row g-4">
+                {% for item in watchlist %}
+                {% if not item.is_completed and not item.is_currently_watching %}
+                <div class="col-md-4">
+                    <div class="card h-100 movie-card shadow-sm">
+                        <img src="{{ item.thumbnail }}" class="card-img-top movie-thumbnail" alt="{{ item.title }}">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ item.title }}</h5>
+                            <p class="card-text">
+                                <small class="text-muted">{{ item.genre }}</small>
+                            </p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <form method="post" action="{% url 'mark_watching' item.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-primary btn-sm">Start Watching</button>
+                                </form>
+                                <small class="text-muted">Added: {{ item.added_on|date:"M d, Y" }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% empty %}
+                <div class="col-12">
+                    <p class="text-center">No items in your watchlist yet.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Currently Watching Tab -->
+        <div class="tab-pane fade" id="watching" role="tabpanel">
+            <div class="row g-4">
+                {% for item in currently_watching %}
+                <div class="col-md-4">
+                    <div class="card h-100 movie-card shadow-sm">
+                        <img src="{{ item.thumbnail }}" class="card-img-top movie-thumbnail" alt="{{ item.title }}">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ item.title }}</h5>
+                            <p class="card-text">
+                                <small class="text-muted">{{ item.genre }}</small>
+                            </p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <form method="post" action="{% url 'mark_completed' item.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-mark-complete btn-sm">Mark as Completed</button>
+                                </form>
+                                <small class="text-muted">Started: {{ item.updated_at|date:"M d, Y" }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <p class="text-center">You're not watching anything currently.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Completed Tab -->
+        <div class="tab-pane fade" id="completed" role="tabpanel">
+            <div class="row g-4">
+                {% for item in completed %}
+                <div class="col-md-4">
+                    <div class="card h-100 movie-card shadow-sm">
+                        <img src="{{ item.thumbnail }}" class="card-img-top movie-thumbnail" alt="{{ item.title }}">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ item.title }}</h5>
+                            <p class="card-text">
+                                <small class="text-muted">{{ item.genre }}</small>
+                            </p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                {% if item.user_rating %}
+                                <div class="rating">
+                                    <i class="fas fa-star text-warning"></i>
+                                    <span>{{ item.user_rating }}/10</span>
+                                </div>
+                                {% else %}
+                                <button class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#ratingModal{{ item.id }}">
+                                    Rate
+                                </button>
+                                {% endif %}
+                                <small class="text-muted">Completed: {{ item.updated_at|date:"M d, Y" }}</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <p class="text-center">You haven't completed any items yet.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock content %}
