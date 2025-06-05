@@ -12,7 +12,7 @@ ALLOWED_HOSTS = env.list('DJANGO_ALLOWED_HOSTS', default=["localhost", "0.0.0.0"
 DATABASES = {
     "default": env.db_url(
         'DATABASE_URL',
-        default='postgresql://postgres:postgres@db:5432/postgres'
+        # default='postgresql://postgres:postgres@localhost:5432/postgres'
     )
 }
 

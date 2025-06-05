@@ -7,3 +7,45 @@ body{
 .login_content {
     text-align: left !important;
 }
+
+.navbar {
+    background-color: rgba(0, 0, 0, 0.9) !important;
+}
+.navbar-brand {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #e50914 !important;
+}
+.nav-link {
+    color: white !important;
+    margin: 0 10px;
+    transition: color 0.3s ease;
+}
+.nav-link:hover {
+    color: #e50914 !important;
+}
+
+.btn-primary {
+    background-color: #e50914;
+    border-color: #e50914;
+}
+.btn-primary:hover {
+    background-color: #b2070f;
+    border-color: #b2070f;
+}
+.btn-outline-light:hover {
+    background-color: #e50914;
+    border-color: #e50914;
+}
+.feature-icon {
+    font-size: 2.5rem;
+    color: #e50914;
+    margin-bottom: 1rem;
+}
+
+footer {
+    margin-inline: 0 !important;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+}
