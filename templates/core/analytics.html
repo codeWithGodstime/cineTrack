@@ -1,0 +1,380 @@
+{% extends '_base.html' %}
+{% load static %}
+
+{% block css %}
+<style>
+    .analytics-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        height: 100%;
+        transition: transform 0.2s;
+    }
+
+    .analytics-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .stat-card {
+        text-align: center;
+        padding: 20px;
+        border-radius: 10px;
+        background: linear-gradient(45deg, #e50914, #b2070f);
+        color: white;
+    }
+
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin: 10px 0;
+    }
+
+    .stat-label {
+        font-size: 1rem;
+        opacity: 0.9;
+    }
+
+    .chart-container {
+        position: relative;
+        height: 300px;
+    }
+
+    .top-rated-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 15px;
+        padding: 10px;
+        border-radius: 8px;
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    .top-rated-poster {
+        width: 50px;
+        height: 75px;
+        object-fit: cover;
+        border-radius: 4px;
+        margin-right: 15px;
+    }
+
+    .top-rated-info {
+        flex-grow: 1;
+    }
+
+    .top-rated-rating {
+        background-color: #e50914;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-weight: bold;
+    }
+
+    .streak-icon {
+        font-size: 2rem;
+        color: #e50914;
+        margin-bottom: 10px;
+    }
+
+    .section-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 20px;
+        color: #333;
+    }
+
+    .export-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: none;
+        border: none;
+        color: #666;
+        cursor: pointer;
+    }
+
+    .export-btn:hover {
+        color: #e50914;
+    }
+</style>
+{% endblock css %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/moment"></script>
+{% endblock extra_head %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="mb-4">Analytics Dashboard</h1>
+
+    <!-- Quick Stats Row -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <i class="fas fa-film mb-2"></i>
+                <div class="stat-number">{{ total_watched }}</div>
+                <div class="stat-label">Total Watched</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <i class="fas fa-percent mb-2"></i>
+                <div class="stat-number">{{ completion_rate }}%</div>
+                <div class="stat-label">Completion Rate</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <i class="fas fa-fire mb-2"></i>
+                <div class="stat-number">{{ current_streak }}</div>
+                <div class="stat-label">Current Streak</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <i class="fas fa-trophy mb-2"></i>
+                <div class="stat-number">{{ longest_streak }}</div>
+                <div class="stat-label">Longest Streak</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 1 -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-8">
+            <div class="analytics-card">
+                <h3 class="section-title">Watch Time by Month</h3>
+                <button class="export-btn" onclick="exportChart('watchTimeChart')">
+                    <i class="fas fa-download"></i>
+                </button>
+                <div class="chart-container">
+                    <canvas id="watchTimeChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="analytics-card">
+                <h3 class="section-title">Media Split</h3>
+                <button class="export-btn" onclick="exportChart('mediaSplitChart')">
+                    <i class="fas fa-download"></i>
+                </button>
+                <div class="chart-container">
+                    <canvas id="mediaSplitChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 2 -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="analytics-card">
+                <h3 class="section-title">Genre Watch Rate</h3>
+                <button class="export-btn" onclick="exportChart('genreChart')">
+                    <i class="fas fa-download"></i>
+                </button>
+                <div class="chart-container">
+                    <canvas id="genreChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="analytics-card">
+                <h3 class="section-title">Backlog Tracker</h3>
+                <button class="export-btn" onclick="exportChart('backlogChart')">
+                    <i class="fas fa-download"></i>
+                </button>
+                <div class="chart-container">
+                    <canvas id="backlogChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Rated Section -->
+    <div class="row g-4">
+        <div class="col-md-6">
+            <div class="analytics-card">
+                <h3 class="section-title">Top Rated Titles</h3>
+                {% for item in top_rated %}
+                <div class="top-rated-item">
+                    <img src="{{ item.thumbnail }}" alt="{{ item.title }}" class="top-rated-poster">
+                    <div class="top-rated-info">
+                        <h5 class="mb-1">{{ item.title }}</h5>
+                        <small class="text-muted">{{ item.media_type|title }}</small>
+                    </div>
+                    <span class="top-rated-rating">
+                        <i class="fas fa-star"></i> {{ item.user_rating }}
+                    </span>
+                </div>
+                {% empty %}
+                <p class="text-muted text-center">No rated titles yet</p>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="analytics-card">
+                <h3 class="section-title">Watch Activity</h3>
+                <div id="activityCalendar" class="chart-container">
+                    <!-- Activity calendar will be rendered here -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+const chartColors = {
+    red: '#e50914',
+    darkRed: '#b2070f',
+    gray: '#666666',
+    lightGray: '#999999'
+};
+
+// Fetch analytics data and create charts
+fetch('{% url "analytics_data" %}')
+    .then(response => response.json())
+    .then(data => {
+        createWatchTimeChart(data.monthly_data);
+        createMediaSplitChart();
+        createGenreChart(data.genre_data);
+        createBacklogChart(data.backlog_data);
+    });
+
+function createWatchTimeChart(data) {
+    const ctx = document.getElementById('watchTimeChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: Object.keys(data),
+            datasets: [{
+                label: 'Items Watched',
+                data: Object.values(data),
+                borderColor: chartColors.red,
+                backgroundColor: 'rgba(229, 9, 20, 0.1)',
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+}
+
+function createMediaSplitChart() {
+    const ctx = document.getElementById('mediaSplitChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Movies', 'TV Shows'],
+            datasets: [{
+                data: [{{ movies_count }}, {{ tv_count }}],
+                backgroundColor: [chartColors.red, chartColors.darkRed],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+function createGenreChart(data) {
+    const ctx = document.getElementById('genreChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(data),
+            datasets: [{
+                label: 'Items Watched',
+                data: Object.values(data),
+                backgroundColor: chartColors.red,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+}
+
+function createBacklogChart(data) {
+    const months = [...new Set([...Object.keys(data.added), ...Object.keys(data.completed)])].sort();
+    const ctx = document.getElementById('backlogChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: months,
+            datasets: [
+                {
+                    label: 'Added',
+                    data: months.map(month => data.added[month] || 0),
+                    backgroundColor: chartColors.red,
+                },
+                {
+                    label: 'Completed',
+                    data: months.map(month => data.completed[month] || 0),
+                    backgroundColor: chartColors.darkRed,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+}
+
+function exportChart(chartId) {
+    const canvas = document.getElementById(chartId);
+    const image = canvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.download = `${chartId}.png`;
+    link.href = image;
+    link.click();
+}
+</script>
+{% endblock extra_js %}
+{% endblock content %} 

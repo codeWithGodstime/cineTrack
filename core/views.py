@@ -1,11 +1,16 @@
 import requests
 import json
+from datetime import datetime, timedelta
+from collections import defaultdict
 from django.shortcuts import render, get_object_or_404, redirect
 from django.views.generic import View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.conf import settings
+from django.http import JsonResponse
+from django.db.models import Count, Avg, Q
+from django.utils import timezone
 
 
 from .models import Watchlist
@@ -168,3 +173,159 @@ class RecommendationsView(LoginRequiredMixin, View):
         }
         
         return render(request, 'core/recommendations.html', context)
+
+
+class AnalyticsView(LoginRequiredMixin, View):
+    def get(self, request):
+        # Basic statistics
+        total_watched = Watchlist.objects.filter(user=request.user, is_completed=True).count()
+        total_items = Watchlist.objects.filter(user=request.user).count()
+        completion_rate = (total_watched / total_items * 100) if total_items > 0 else 0
+        
+        # Media split
+        movies_count = Watchlist.objects.filter(user=request.user, is_completed=True, media_type='movie').count()
+        tv_count = Watchlist.objects.filter(user=request.user, is_completed=True, media_type='tv').count()
+        
+        # Top rated titles
+        top_rated = Watchlist.objects.filter(
+            user=request.user,
+            is_completed=True,
+            user_rating__isnull=False
+        ).order_by('-user_rating')[:5]
+
+        # Calculate watch streak
+        completed_items = Watchlist.objects.filter(
+            user=request.user,
+            is_completed=True
+        ).order_by('updated_at')
+        
+        current_streak = 0
+        longest_streak = 0
+        current_date = None
+        
+        for item in completed_items:
+            item_date = item.updated_at.date()
+            if current_date is None or item_date == current_date + timedelta(days=1):
+                current_streak += 1
+                longest_streak = max(longest_streak, current_streak)
+            elif item_date > current_date + timedelta(days=1):
+                current_streak = 1
+            current_date = item_date
+
+        context = {
+            'total_watched': total_watched,
+            'total_items': total_items,
+            'completion_rate': round(completion_rate, 1),
+            'movies_count': movies_count,
+            'tv_count': tv_count,
+            'top_rated': top_rated,
+            'current_streak': current_streak,
+            'longest_streak': longest_streak,
+        }
+        
+        return render(request, 'core/analytics.html', context)
+
+
+@login_required
+def analytics_data(request):
+    # Genre watch rate
+    genre_data = defaultdict(int)
+    completed_items = Watchlist.objects.filter(user=request.user, is_completed=True)
+    for item in completed_items:
+        genres = item.genre.split(',') if item.genre else []
+        for genre in genres:
+            genre = genre.strip()
+            if genre:
+                genre_data[genre] += 1
+
+    # Watch time by month
+    six_months_ago = timezone.now() - timedelta(days=180)
+    monthly_data = defaultdict(int)
+    completed_by_month = completed_items.filter(
+        updated_at__gte=six_months_ago
+    ).order_by('updated_at')
+    
+    for item in completed_by_month:
+        month_key = item.updated_at.strftime('%Y-%m')
+        monthly_data[month_key] += 1
+
+    # Backlog tracker
+    added_by_month = defaultdict(int)
+    completed_by_month_count = defaultdict(int)
+    all_items = Watchlist.objects.filter(user=request.user)
+    
+    for item in all_items:
+        added_month = item.added_on.strftime('%Y-%m')
+        added_by_month[added_month] += 1
+        if item.is_completed:
+            completed_month = item.updated_at.strftime('%Y-%m')
+            completed_by_month_count[completed_month] += 1
+
+    data = {
+        'genre_data': dict(genre_data),
+        'monthly_data': dict(monthly_data),
+        'backlog_data': {
+            'added': dict(added_by_month),
+            'completed': dict(completed_by_month_count)
+        }
+    }
+    
+    return JsonResponse(data)
+
+
+class ProfileView(LoginRequiredMixin, View):
+    def get(self, request):
+        # Calculate user statistics
+        total_watched = Watchlist.objects.filter(user=request.user, is_completed=True).count()
+        avg_rating = Watchlist.objects.filter(
+            user=request.user,
+            user_rating__isnull=False
+        ).aggregate(Avg('user_rating'))['user_rating__avg']
+        
+        # Calculate favorite genres
+        genre_counts = defaultdict(int)
+        for item in Watchlist.objects.filter(user=request.user):
+            genres = item.genre.split(',') if item.genre else []
+            for genre in genres:
+                genre = genre.strip()
+                if genre:
+                    genre_counts[genre] += 1
+        
+        favorite_genres = sorted(genre_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+        
+        # Determine watch persona
+        persona = "Casual Viewer"
+        if total_watched > 100:
+            persona = "Movie Buff"
+        elif total_watched > 50:
+            persona = "Regular Watcher"
+        
+        if avg_rating and avg_rating > 4:
+            persona = "Cinephile"
+        
+        context = {
+            'user': request.user,
+            'total_watched': total_watched,
+            'avg_rating': round(avg_rating, 1) if avg_rating else None,
+            'favorite_genres': favorite_genres,
+            'watch_persona': persona,
+            'movies_count': Watchlist.objects.filter(user=request.user, media_type='movie', is_completed=True).count(),
+            'tv_count': Watchlist.objects.filter(user=request.user, media_type='tv', is_completed=True).count(),
+        }
+        
+        return render(request, 'core/profile.html', context)
+
+
+class ProfileEditView(LoginRequiredMixin, View):
+    def get(self, request):
+        return render(request, 'core/profile_edit.html', {'user': request.user})
+
+    def post(self, request):
+        user = request.user
+        user.first_name = request.POST.get('first_name', '')
+        user.last_name = request.POST.get('last_name', '')
+        user.email = request.POST.get('email', '')
+        user.save()
+        
+        messages.success(request, 'Profile updated successfully!')
+        return redirect('profile')

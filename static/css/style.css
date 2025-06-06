@@ -1,6 +1,6 @@
 
 body{
-    background-color:#fff !important;
+    background-color:#170202 !important;
     overflow-x: hidden;
 }
 
@@ -9,7 +9,7 @@ body{
 }
 
 .navbar {
-    background-color: rgba(0, 0, 0, 0.9) !important;
+    background-color: #170202  !important;
 }
 .navbar-brand {
     font-size: 1.5rem;

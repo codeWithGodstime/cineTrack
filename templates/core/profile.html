@@ -1,0 +1,226 @@
+{% extends '_base.html' %}
+{% load static %}
+
+{% block css %}
+<style>
+    .profile-header {
+        background: linear-gradient(45deg, #e50914, #b2070f);
+        color: white;
+        padding: 50px 0;
+        margin-bottom: 30px;
+        border-radius: 0 0 20px 20px;
+    }
+
+    .profile-avatar {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        background-color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .profile-avatar i {
+        font-size: 4rem;
+        color: #e50914;
+    }
+
+    .profile-name {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    .profile-email {
+        opacity: 0.9;
+        margin-bottom: 20px;
+    }
+
+    .profile-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 25px;
+        height: 100%;
+        transition: transform 0.2s;
+    }
+
+    .profile-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #e50914;
+        margin: 10px 0;
+    }
+
+    .genre-badge {
+        background-color: rgba(229, 9, 20, 0.1);
+        color: #e50914;
+        padding: 8px 15px;
+        border-radius: 20px;
+        margin: 5px;
+        display: inline-block;
+    }
+
+    .persona-badge {
+        background-color: #e50914;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 25px;
+        font-weight: bold;
+        display: inline-block;
+        margin-top: 10px;
+    }
+
+    .section-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 20px;
+        color: #333;
+        position: relative;
+        padding-bottom: 10px;
+    }
+
+    .section-title::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 40px;
+        height: 3px;
+        background-color: #e50914;
+    }
+
+    .edit-profile-btn {
+        background-color: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: 2px solid white;
+        padding: 8px 20px;
+        border-radius: 20px;
+        transition: all 0.3s;
+    }
+
+    .edit-profile-btn:hover {
+        background-color: white;
+        color: #e50914;
+    }
+
+    .joined-date {
+        font-size: 0.9rem;
+        opacity: 0.8;
+    }
+</style>
+{% endblock css %}
+
+{% block content %}
+<div class="profile-header text-center">
+    <div class="container">
+        <div class="profile-avatar">
+            <i class="fas fa-user"></i>
+        </div>
+        <h1 class="profile-name">{{ user.get_full_name|default:user.username }}</h1>
+        <p class="profile-email">{{ user.email }}</p>
+        <p class="joined-date">Member since {{ user.date_joined|date:"F Y" }}</p>
+        <a href="{% url 'profile_edit' %}" class="btn edit-profile-btn">
+            <i class="fas fa-edit me-2"></i>Edit Profile
+        </a>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Watch Persona Section -->
+    <div class="text-center mb-5">
+        <span class="persona-badge">
+            <i class="fas fa-film me-2"></i>{{ watch_persona }}
+        </span>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-3">
+            <div class="profile-card text-center">
+                <i class="fas fa-film fa-2x text-muted"></i>
+                <div class="stat-number">{{ total_watched }}</div>
+                <div class="text-muted">Total Watched</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="profile-card text-center">
+                <i class="fas fa-star fa-2x text-muted"></i>
+                <div class="stat-number">{{ avg_rating|default:"N/A" }}</div>
+                <div class="text-muted">Average Rating</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="profile-card text-center">
+                <i class="fas fa-video fa-2x text-muted"></i>
+                <div class="stat-number">{{ movies_count }}</div>
+                <div class="text-muted">Movies</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="profile-card text-center">
+                <i class="fas fa-tv fa-2x text-muted"></i>
+                <div class="stat-number">{{ tv_count }}</div>
+                <div class="text-muted">TV Shows</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Favorite Genres -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="profile-card">
+                <h3 class="section-title">Favorite Genres</h3>
+                <div class="text-center">
+                    {% for genre, count in favorite_genres %}
+                    <span class="genre-badge">
+                        {{ genre }} ({{ count }})
+                    </span>
+                    {% empty %}
+                    <p class="text-muted">No genres yet</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Account Settings -->
+    <div class="row">
+        <div class="col-12">
+            <div class="profile-card">
+                <h3 class="section-title">Account Settings</h3>
+                <div class="list-group list-group-flush">
+                    <a href="{% url 'profile_edit' %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-user-edit me-2"></i>
+                            Edit Profile Information
+                        </div>
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                    <a href="{% url 'account_email' %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-envelope me-2"></i>
+                            Email Settings
+                        </div>
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                    <a href="{% url 'account_change_password' %}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-lock me-2"></i>
+                            Change Password
+                        </div>
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %} 
