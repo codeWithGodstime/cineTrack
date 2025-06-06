@@ -8,4 +8,7 @@ urlpatterns = [
     path('mark-completed/<int:item_id>/', views.mark_as_completed, name='mark_completed'),
     path('trending/', views.TrendingView.as_view(), name='trending'),
     path('add-to-watchlist/', views.add_to_watchlist, name='add_to_watchlist'),
+    path('search/', views.SearchView.as_view(), name='search'),
+    # path('recommendations/<str:media_type>/<int:tmdb_id>/', views.RecommendationsView.as_view(), name='recommendations'),
+    path('recommendations/', views.RecommendationsView.as_view(), name='recommendations'),
 ]

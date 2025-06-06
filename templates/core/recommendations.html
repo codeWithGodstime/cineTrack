@@ -1,0 +1,253 @@
+{% extends '_base.html' %}
+{% load static %}
+
+{% block css %}
+<style>
+    .hero-section {
+        background-color: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 50px 0;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .hero-backdrop {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-size: cover;
+        background-position: center;
+        opacity: 0.3;
+        filter: blur(5px);
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 1;
+    }
+
+    .poster-container {
+        width: 300px;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .poster-container img {
+        width: 100%;
+        height: auto;
+    }
+
+    .movie-details {
+        padding-left: 30px;
+    }
+
+    .rating {
+        background-color: rgba(255, 255, 255, 0.1);
+        padding: 5px 15px;
+        border-radius: 20px;
+        display: inline-flex;
+        align-items: center;
+        margin-right: 15px;
+    }
+
+    .rating i {
+        color: #ffc107;
+        margin-right: 5px;
+    }
+
+    .genre-badge {
+        background-color: #e50914;
+        color: white;
+        padding: 5px 15px;
+        border-radius: 20px;
+        margin-right: 10px;
+        margin-bottom: 10px;
+        display: inline-block;
+    }
+
+    .recommendation-card {
+        transition: transform 0.2s;
+        height: 100%;
+    }
+
+    .recommendation-card:hover {
+        transform: scale(1.02);
+    }
+
+    .card-img {
+        height: 250px;
+        object-fit: cover;
+    }
+
+    .rating-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: rgba(0, 0, 0, 0.8);
+        color: #ffc107;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-weight: bold;
+    }
+
+    .section-title {
+        position: relative;
+        padding-bottom: 15px;
+        margin-bottom: 30px;
+    }
+
+    .section-title::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 60px;
+        height: 3px;
+        background-color: #e50914;
+    }
+
+    .overview-text {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+</style>
+{% endblock css %}
+
+{% block content %}
+{% if item %}
+<div class="hero-section mb-5">
+    <div class="hero-backdrop" style="background-image: url('https://image.tmdb.org/t/p/original{{ item.backdrop_path }}');"></div>
+    <div class="container">
+        <div class="row hero-content">
+            <div class="col-md-4">
+                <div class="poster-container">
+                    <img src="https://image.tmdb.org/t/p/w500{{ item.poster_path }}" 
+                         alt="{{ item.title|default:item.name }}"
+                         class="img-fluid">
+                </div>
+            </div>
+            <div class="col-md-8 movie-details">
+                <h1 class="display-4 mb-3">{{ item.title|default:item.name }}</h1>
+                <div class="mb-4">
+                    <span class="rating">
+                        <i class="fas fa-star"></i>
+                        {{ item.vote_average|floatformat:1 }}
+                    </span>
+                    <span class="text-muted">
+                        {{ item.release_date|default:item.first_air_date|date:"Y" }}
+                    </span>
+                </div>
+                <div class="mb-4">
+                    {% for genre in item.genres %}
+                    <span class="genre-badge">{{ genre.name }}</span>
+                    {% endfor %}
+                </div>
+                <p class="lead">{{ item.overview }}</p>
+                <form method="post" action="{% url 'add_to_watchlist' %}" class="mt-4">
+                    {% csrf_token %}
+                    <input type="hidden" name="tmdb_id" value="{{ item.id }}">
+                    <input type="hidden" name="title" value="{{ item.title|default:item.name }}">
+                    <input type="hidden" name="media_type" value="{{ media_type }}">
+                    <input type="hidden" name="poster_path" value="{{ item.poster_path }}">
+                    <button type="submit" class="btn btn-danger btn-lg">
+                        <i class="fas fa-plus me-2"></i>Add to Watchlist
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    {% if recommendations %}
+    <h2 class="section-title">Recommended for You</h2>
+    <div class="row g-4 mb-5">
+        {% for item in recommendations %}
+        <div class="col-md-3">
+            <div class="card recommendation-card shadow-sm">
+                <div class="position-relative">
+                    <img src="https://image.tmdb.org/t/p/w500{{ item.poster_path }}" 
+                         class="card-img-top card-img" 
+                         alt="{{ item.title|default:item.name }}">
+                    <div class="rating-badge">
+                        <i class="fas fa-star"></i> {{ item.vote_average|floatformat:1 }}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ item.title|default:item.name }}</h5>
+                    <p class="card-text overview-text text-muted small">{{ item.overview }}</p>
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <form method="post" action="{% url 'add_to_watchlist' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="tmdb_id" value="{{ item.id }}">
+                            <input type="hidden" name="title" value="{{ item.title|default:item.name }}">
+                            <input type="hidden" name="media_type" value="{{ media_type }}">
+                            <input type="hidden" name="poster_path" value="{{ item.poster_path }}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="fas fa-plus me-1"></i>Add
+                            </button>
+                        </form>
+                        <small class="text-muted">
+                            {{ item.release_date|default:item.first_air_date|date:"Y" }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if similar %}
+    <h2 class="section-title">Similar {{ media_type|title }}s</h2>
+    <div class="row g-4">
+        {% for item in similar %}
+        <div class="col-md-3">
+            <div class="card recommendation-card shadow-sm">
+                <div class="position-relative">
+                    <img src="https://image.tmdb.org/t/p/w500{{ item.poster_path }}" 
+                         class="card-img-top card-img" 
+                         alt="{{ item.title|default:item.name }}">
+                    <div class="rating-badge">
+                        <i class="fas fa-star"></i> {{ item.vote_average|floatformat:1 }}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <h5 class="card-title">{{ item.title|default:item.name }}</h5>
+                    <p class="card-text overview-text text-muted small">{{ item.overview }}</p>
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <form method="post" action="{% url 'add_to_watchlist' %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="tmdb_id" value="{{ item.id }}">
+                            <input type="hidden" name="title" value="{{ item.title|default:item.name }}">
+                            <input type="hidden" name="media_type" value="{{ media_type }}">
+                            <input type="hidden" name="poster_path" value="{{ item.poster_path }}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="fas fa-plus me-1"></i>Add
+                            </button>
+                        </form>
+                        <small class="text-muted">
+                            {{ item.release_date|default:item.first_air_date|date:"Y" }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% else %}
+<div class="container mt-5">
+    <div class="alert alert-warning text-center">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        Sorry, we couldn't find the details for this {{ media_type }}.
+    </div>
+</div>
+{% endif %}
+{% endblock content %} 

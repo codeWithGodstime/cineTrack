@@ -1,0 +1,208 @@
+{% extends '_base.html' %}
+{% load static %}
+
+{% block css %}
+<style>
+    .search-container {
+        background-color: rgba(0, 0, 0, 0.05);
+        border-radius: 10px;
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+
+    .search-input {
+        border-radius: 25px;
+        padding: 10px 20px;
+        border: 2px solid #e50914;
+    }
+
+    .search-input:focus {
+        box-shadow: none;
+        border-color: #b2070f;
+    }
+
+    .btn-search {
+        background-color: #e50914;
+        color: white;
+        border-radius: 25px;
+        padding: 10px 25px;
+    }
+
+    .btn-search:hover {
+        background-color: #b2070f;
+        color: white;
+    }
+
+    .media-type-toggle .btn {
+        border-radius: 20px;
+    }
+
+    .media-type-toggle .btn.active {
+        background-color: #e50914;
+        border-color: #e50914;
+    }
+
+    .result-card {
+        transition: transform 0.2s;
+        height: 100%;
+    }
+
+    .result-card:hover {
+        transform: scale(1.02);
+    }
+
+    .poster-img {
+        height: 300px;
+        object-fit: cover;
+    }
+
+    .rating-badge {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background-color: rgba(0, 0, 0, 0.8);
+        color: #ffc107;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-weight: bold;
+    }
+
+    .overview-text {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .pagination .page-link {
+        color: #e50914;
+    }
+
+    .pagination .page-item.active .page-link {
+        background-color: #e50914;
+        border-color: #e50914;
+        color: white;
+    }
+</style>
+{% endblock css %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="search-container">
+        <h1 class="mb-4">Search Movies & TV Shows</h1>
+        <form method="get" action="{% url 'search' %}" class="mb-4">
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <input type="text" name="q" class="form-control form-control-lg search-input" 
+                           placeholder="Search for a movie or TV show..." value="{{ query }}">
+                </div>
+                <div class="col-md-2">
+                    <select name="type" class="form-select form-select-lg">
+                        <option value="movie" {% if media_type == 'movie' %}selected{% endif %}>Movies</option>
+                        <option value="tv" {% if media_type == 'tv' %}selected{% endif %}>TV Shows</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-search btn-lg w-100">
+                        <i class="fas fa-search me-2"></i>Search
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    {% if query %}
+        {% if results %}
+            <h2 class="mb-4">Search Results for "{{ query }}"</h2>
+            <div class="row g-4">
+                {% for result in results %}
+                <div class="col-md-3">
+                    <div class="card result-card shadow-sm">
+                        <div class="position-relative">
+                            {% if result.poster_path %}
+                            <img src="https://image.tmdb.org/t/p/w500{{ result.poster_path }}" 
+                                 class="card-img-top poster-img" 
+                                 alt="{{ result.title|default:result.name }}">
+                            {% else %}
+                            <div class="card-img-top poster-img bg-secondary d-flex align-items-center justify-content-center">
+                                <i class="fas fa-film fa-3x text-white"></i>
+                            </div>
+                            {% endif %}
+                            <div class="rating-badge">
+                                <i class="fas fa-star"></i> {{ result.vote_average|floatformat:1 }}
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">{{ result.title|default:result.name }}</h5>
+                            <p class="card-text overview-text text-muted small">{{ result.overview }}</p>
+                            <div class="d-flex justify-content-between align-items-center mt-3">
+                                <form method="post" action="{% url 'add_to_watchlist' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="tmdb_id" value="{{ result.id }}">
+                                    <input type="hidden" name="title" value="{{ result.title|default:result.name }}">
+                                    <input type="hidden" name="media_type" value="{{ media_type }}">
+                                    <input type="hidden" name="poster_path" value="{{ result.poster_path }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="fas fa-plus me-1"></i>Add to Watchlist
+                                    </button>
+                                </form>
+                                <a href="{% url 'recommendations' media_type result.id %}" 
+                                   class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-thumbs-up me-1"></i>Similar
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if total_pages > 1 %}
+            <nav class="mt-5">
+                <ul class="pagination justify-content-center">
+                    {% if has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="?q={{ query }}&type={{ media_type }}&page={{ current_page|add:'-1' }}">
+                            Previous
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% for i in total_pages|ljust:"5"|slice:":5" %}
+                        {% if forloop.counter == current_page %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ forloop.counter }}</span>
+                        </li>
+                        {% else %}
+                        <li class="page-item">
+                            <a class="page-link" href="?q={{ query }}&type={{ media_type }}&page={{ forloop.counter }}">
+                                {{ forloop.counter }}
+                            </a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?q={{ query }}&type={{ media_type }}&page={{ current_page|add:'1' }}">
+                            Next
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        {% else %}
+            <div class="alert alert-info text-center">
+                <i class="fas fa-info-circle me-2"></i>No results found for "{{ query }}". Try a different search term.
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="text-center text-muted mt-5">
+            <i class="fas fa-search fa-3x mb-3"></i>
+            <h3>Start searching for your favorite movies and TV shows!</h3>
+            <p>Use the search bar above to discover content.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock content %} 

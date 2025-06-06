@@ -84,3 +84,87 @@ def add_to_watchlist(request):
             messages.info(request, f'"{title}" is already in your watchlist.')
 
     return redirect('trending')
+
+
+class SearchView(LoginRequiredMixin, View):
+    def get(self, request):
+        query = request.GET.get('q', '')
+        media_type = request.GET.get('type', 'movie')
+        page = request.GET.get('page', 1)
+        results = []
+        total_pages = 0
+
+        if query:
+            api_key = settings.TMDB_API_KEY
+            url = f'https://api.themoviedb.org/3/search/{media_type}'
+            params = {
+                'api_key': api_key,
+                'query': query,
+                'page': page,
+                'include_adult': False,
+                'language': 'en-US'
+            }
+            
+            response = requests.get(url, params=params)
+            if response.status_code == 200:
+                data = response.json()
+                results = data.get('results', [])
+                total_pages = data.get('total_pages', 0)
+
+        context = {
+            'results': results,
+            'query': query,
+            'media_type': media_type,
+            'current_page': int(page),
+            'total_pages': total_pages,
+            'has_next': int(page) < total_pages,
+            'has_prev': int(page) > 1,
+        }
+        
+        return render(request, 'core/search.html', context)
+
+
+class RecommendationsView(LoginRequiredMixin, View):
+    def get(self, request, *args, **kwargs):
+        api_key = settings.TMDB_API_KEY
+        
+        media_type = request.GET.get('type', 'movie')
+        tmdb_id = request.GET.get('tmdb_id', '')
+        
+        # Get details of the original item
+        details_url = f'https://api.themoviedb.org/3/{media_type}/{tmdb_id}'
+        details_params = {
+            'api_key': api_key,
+            'language': 'en-US'
+        }
+        details_response = requests.get(details_url, params=details_params)
+        item_details = details_response.json() if details_response.status_code == 200 else None
+
+        # Get recommendations
+        recommendations_url = f'https://api.themoviedb.org/3/{media_type}/{tmdb_id}/recommendations'
+        recommendations_params = {
+            'api_key': api_key,
+            'language': 'en-US',
+            'page': 1
+        }
+        recommendations_response = requests.get(recommendations_url, params=recommendations_params)
+        recommendations = recommendations_response.json().get('results', []) if recommendations_response.status_code == 200 else []
+
+        # Get similar items
+        similar_url = f'https://api.themoviedb.org/3/{media_type}/{tmdb_id}/similar'
+        similar_params = {
+            'api_key': api_key,
+            'language': 'en-US',
+            'page': 1
+        }
+        similar_response = requests.get(similar_url, params=similar_params)
+        similar = similar_response.json().get('results', []) if similar_response.status_code == 200 else []
+
+        context = {
+            'item': item_details,
+            'recommendations': recommendations[:8],  # Limit to 8 items
+            'similar': similar[:8],  # Limit to 8 items
+            'media_type': media_type
+        }
+        
+        return render(request, 'core/recommendations.html', context)
