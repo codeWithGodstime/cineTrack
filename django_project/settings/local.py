@@ -1,12 +1,12 @@
 from .base import *
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env.str('DJANGO_SECRET_KEY', default='django-insecure-0peo@#x9jur3!h$ryje!$879xww8y1y66jx!%*#ymhg&jkozs2')
+SECRET_KEY = env.str('SECRET_KEY', default='django-insecure-0peo@#x9jur3!h$ryje!$879xww8y1y66jx!%*#ymhg&jkozs2')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env.bool('DJANGO_DEBUG', default=True)
+DEBUG = env.bool('DEBUG', default=True)
 
-ALLOWED_HOSTS = env.list('DJANGO_ALLOWED_HOSTS', default=["localhost", "0.0.0.0", "127.0.0.1"])
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=["localhost", "0.0.0.0", "127.0.0.1"])
 
 # Database
 DATABASES = {
