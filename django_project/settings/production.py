@@ -38,15 +38,53 @@ DEFAULT_FROM_EMAIL = env.str('DEFAULT_FROM_EMAIL')
 
 CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS') 
 
+# Enhanced Logging Configuration
 LOGGING = {
-    "version": 1,
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
         },
     },
-    "root": {
-        "handlers": ["console"],
-        "level": "ERROR",
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        'file': {
+            'class': 'logging.FileHandler',
+            'filename': '/tmp/django-errors.log',
+            'formatter': 'verbose',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'ERROR',
+            'propagate': True,
+        },
+        'django.request': {
+            'handlers': ['console', 'file'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'core': {  # Add your app name here
+            'handlers': ['console', 'file'],
+            'level': 'ERROR',
+            'propagate': True,
+        },
     },
 }
+
+# Gunicorn Configuration
+WSGI_APPLICATION = 'django_project.wsgi.application'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Ensure static files are properly configured
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Increase timeout for TMDB API calls
+import requests
+requests.adapters.DEFAULT_TIMEOUT = 15  # seconds
